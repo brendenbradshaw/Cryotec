@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>CryoTec — Interactive Airflow</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="cryotec-airflow.css" />
+</head>
+<body>
+<div class="shell">
+  <div class="stage-wrap">
+    <div>
+      <div class="stage mode-cool view-front" id="stage">
+        <div class="floor-glow"></div>
+
+        <!-- Thermal plate (back view) -->
+        <div class="plate-overlay" id="plateOverlay">
+          <div class="plate-gradient" id="plateGradient"></div>
+          <div class="plate-haze" id="plateHaze"></div>
+        </div>
+
+        <!-- Particle canvas behind product (for interior / side exhaust trails) -->
+        <canvas class="particle-layer" id="pcBehind"></canvas>
+
+        <!-- Product image -->
+        <img class="product" id="productImg" src="assets/cryotec-front.png" alt="CryoTec front" />
+
+        <!-- Particle canvas on top (for intake streams above the mesh) -->
+        <canvas class="particle-layer front-above" id="pcFront"></canvas>
+
+        <!-- markers group -->
+        <div id="markers"></div>
+
+        <div class="tooltip" id="tooltip"></div>
+
+        <!-- Floating stage controls (bottom center) -->
+        <div class="stage-controls" id="stageControls">
+          <div class="sc-row sc-view">
+            <button data-view="front" class="sc-btn active" type="button">Front</button>
+            <button data-view="back" class="sc-btn" type="button">Rear</button>
+          </div>
+          <div class="sc-row sc-mode" id="scMode" aria-hidden="true">
+            <button data-mode="cool" class="sc-btn sc-cool active" type="button">Cool</button>
+            <button data-mode="warm" class="sc-btn sc-warm" type="button">Heat</button>
+            <button data-mode="contrast" class="sc-btn sc-contrast" type="button">Contrast</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="cryotec-airflow.js" defer></script>
+</body>
+</html>
