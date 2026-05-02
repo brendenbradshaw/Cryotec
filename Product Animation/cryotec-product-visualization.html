@@ -1,0 +1,831 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CryoTec — Product Visualization</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --c-blue:#0066FF;
+    --c-cold:#60c8ff;
+    --c-heat:#ff6420;
+    --c-ink:#111;
+    --c-body:#555;
+    --c-muted:#8a8a8a;
+    --c-bg-soft:#f7f7f5;
+    --font-sans:'Inter',system-ui,-apple-system,sans-serif;
+    --font-mono:'JetBrains Mono',monospace;
+    --ease-state:cubic-bezier(.2,.8,.2,1);
+    --ease-enter:cubic-bezier(.22,1,.36,1);
+
+    /* active mode driving glow + accents */
+    --mode:#60c8ff;
+    --mode-rgb:96,200,255;
+    --mode-2:#60c8ff;
+    --mode-2-rgb:96,200,255;
+    /* intensity multiplier — 0 (gentle) → 1 (max). Drives glow strength */
+    --intensity:1;
+
+    /* ============================================================
+       THERAPY-PLATE GLOW POSITION (rear view) — tweak these 4 values
+       to align the glow with the actual plate in the photo. They are
+       % values relative to the flipper container (the device image).
+       ============================================================ */
+    --plate-x: 25%;     /* left offset from flipper's left edge */
+    --plate-y: 25%;     /* top offset from flipper's top edge */
+    --plate-w: 50%;     /* width as % of flipper width */
+    --plate-h: 59%;     /* height as % of flipper height */
+    --plate-radius: 12px; /* corner roundness of glow */
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--c-bg-soft);font-family:var(--font-sans);color:var(--c-ink);-webkit-font-smoothing:antialiased}
+
+  /* OUTER SHELL — off-white ====================================== */
+  .ct-shell{
+    background:var(--c-bg-soft);
+    padding:clamp(48px,6vw,80px) clamp(20px,4vw,64px);
+  }
+  .ct-head{
+    max-width:1320px;margin:0 auto clamp(28px,3.5vw,44px);
+    display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:24px;
+  }
+  .ct-eyebrow{
+    font:600 11px/1 var(--font-sans);letter-spacing:.2em;text-transform:uppercase;
+    color:var(--c-blue);display:inline-flex;align-items:center;gap:12px;margin-bottom:18px;
+  }
+  .ct-eyebrow::before{content:"";width:22px;height:1px;background:currentColor;display:block}
+  .ct-title{
+    font-size:clamp(32px,4vw,56px);font-weight:700;letter-spacing:-.025em;line-height:1.04;
+    color:var(--c-ink);max-width:780px;margin:0;text-wrap:balance;
+  }
+  .ct-title em{color:var(--c-blue);font-style:normal}
+  .ct-subhead{font-size:15px;line-height:1.55;color:var(--c-body);max-width:340px;margin:0}
+
+  /* SCROLL TRACK — sticky stage =================================== */
+  .ct-track{
+    position:relative;
+    height: 380vh; /* mode segments + spec segments */
+    max-width:1320px;margin:0 auto;
+  }
+  .ct-stage-wrap{
+    position:sticky;top:0;height:100vh;
+    display:flex;align-items:center;justify-content:center;
+  }
+
+  /* DARK HERO CARD =============================================== */
+  .ct-card{
+    position:relative;
+    width:100%;height:min(86vh, 760px);
+    border-radius:28px;
+    background:
+      radial-gradient(80% 60% at 50% 50%, rgba(var(--mode-rgb),calc(.10 + .14 * var(--intensity))), transparent 70%),
+      linear-gradient(180deg, #0e0e10 0%, #060608 100%);
+    border:1px solid rgba(255,255,255,.06);
+    box-shadow:0 50px 100px -40px rgba(0,0,0,.45), 0 0 0 1px rgba(0,0,0,.04);
+    overflow:hidden;isolation:isolate;color:#fff;
+    transition: background .6s var(--ease-state);
+  }
+  .ct-card::before{
+    content:"";position:absolute;inset:0;
+    background-image:
+      linear-gradient(to right, rgba(255,255,255,.025) 1px, transparent 1px),
+      linear-gradient(to bottom, rgba(255,255,255,.025) 1px, transparent 1px);
+    background-size:56px 56px;
+    mask-image:radial-gradient(ellipse at 50% 50%, #000 30%, transparent 80%);
+    pointer-events:none;z-index:0;
+  }
+  .ct-card::after{
+    /* mood glow — strength scales with --intensity */
+    content:"";position:absolute;inset:-15%;
+    background:
+      radial-gradient(36% 30% at 50% 55%, rgba(var(--mode-rgb),calc(.30 + .35 * var(--intensity))), transparent 70%),
+      radial-gradient(30% 26% at 50% 55%, rgba(var(--mode-2-rgb),calc(.20 + .30 * var(--intensity))), transparent 70%);
+    filter:blur(40px);
+    opacity:calc(.55 + .45 * var(--intensity));
+    pointer-events:none;z-index:0;
+    transition:background .6s var(--ease-state), opacity .6s var(--ease-state);
+  }
+
+  /* TOP CHROME =================================================== */
+  .ct-chrome-top{
+    position:absolute;top:24px;left:28px;right:28px;
+    display:flex;justify-content:space-between;align-items:center;
+    z-index:6;font-family:var(--font-mono);
+    font-size:10px;letter-spacing:.22em;text-transform:uppercase;
+    color:rgba(255,255,255,.55);
+    pointer-events:none;
+  }
+  .ct-chrome-top .right{color:rgba(255,255,255,.85)}
+
+  /* MODE RAIL — right side of card =============================== */
+  .ct-mode-rail{
+    position:absolute;right:28px;top:50%;transform:translateY(-50%);
+    display:flex;flex-direction:column;gap:18px;align-items:flex-end;
+    z-index:6;
+  }
+  .ct-mode-rail .rail-item{
+    display:flex;align-items:center;gap:10px;cursor:pointer;
+    color:rgba(255,255,255,.45);
+    transition:color .35s var(--ease-state);
+    font:600 10px/1 var(--font-mono);letter-spacing:.22em;text-transform:uppercase;
+    background:transparent;border:0;padding:0;
+  }
+  .ct-mode-rail .rail-dot{
+    width:7px;height:7px;border-radius:50%;
+    background:rgba(255,255,255,.25);
+    transition:all .35s var(--ease-state);
+  }
+  .ct-mode-rail .rail-item[data-active="true"]{color:var(--mode)}
+  .ct-mode-rail .rail-item[data-active="true"] .rail-dot{
+    background:var(--mode);box-shadow:0 0 10px var(--mode);
+    transform:scale(1.6);
+  }
+
+  /* STAGE GRID =================================================== */
+  .ct-stage{
+    position:relative;z-index:1;
+    width:100%;height:100%;
+    display:grid;
+    grid-template-columns: 1.05fr 1fr 1.05fr;
+    align-items:center;
+    padding: 70px 80px 90px;
+    gap:24px;
+  }
+
+  /* LEFT — mode word + temp + tagline ============================ */
+  .ct-left{display:flex;flex-direction:column;justify-content:center;gap:22px;align-self:center}
+  .ct-mode-word{
+    font-size:clamp(44px,7vw,96px);font-weight:700;letter-spacing:-.04em;line-height:.95;
+    color:#fff;text-wrap:balance;
+  }
+  .ct-mode-word .word-mask{
+    display:inline-block;
+    background:linear-gradient(120deg, var(--mode), var(--mode-2));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .ct-temp{
+    display:flex;align-items:flex-end;gap:8px;
+    font-size:clamp(72px,10vw,140px);font-weight:600;letter-spacing:-.05em;
+    line-height:.9;color:var(--mode);
+    font-variant-numeric:tabular-nums;
+  }
+  .ct-temp .num{display:inline-block;min-width:1.8ch;text-align:right}
+  .ct-temp .unit{font-size:.32em;font-weight:500;margin-bottom:.18em;letter-spacing:0;color:var(--mode);opacity:.85}
+  .ct-temp-f{font:500 12px/1 var(--font-mono);color:rgba(255,255,255,.5);letter-spacing:.04em}
+  .ct-tagline{font-size:18px;line-height:1.45;color:rgba(255,255,255,.78);max-width:340px;font-weight:400;margin:0;text-wrap:balance}
+
+  /* CENTER — product ============================================= */
+  .ct-product{
+    position:relative;height:100%;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ct-flipper{
+    position:relative;
+    /* default sized for FRONT (front view = 1.5x previous = ~720px) */
+    width:min(100%, 720px);
+    aspect-ratio: 686/1000;
+    transform-style:preserve-3d;
+    transition: transform 1s var(--ease-state), width .6s var(--ease-state);
+    will-change:transform;
+  }
+  .ct-flipper[data-face="rear"]{
+    transform:rotateY(180deg);
+    width:min(96%, 320px); /* rear stays at original size */
+  }
+  .ct-face{
+    position:absolute;inset:0;
+    backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  }
+  .ct-face img{
+    width:100%;height:100%;object-fit:contain;
+    filter:drop-shadow(0 40px 70px rgba(0,0,0,.7)) drop-shadow(0 0 32px rgba(var(--mode-rgb),calc(.18 + .14 * var(--intensity))));
+    transition:filter .5s var(--ease-state);
+  }
+  .ct-face.rear{transform:rotateY(180deg)}
+
+  /* THERAPY PLATE GLOW — coords driven by CSS vars */
+  .ct-plate-glow{
+    position:absolute;
+    left:var(--plate-x);
+    top:var(--plate-y);
+    width:var(--plate-w);
+    height:var(--plate-h);
+    border-radius:var(--plate-radius);
+    pointer-events:none;
+    opacity:0;transition:opacity .5s var(--ease-state);
+  }
+  .ct-product[data-face="rear"] .ct-plate-glow{opacity:1}
+  .ct-plate-glow .ring{
+    position:absolute;inset:0;border-radius:inherit;
+    border:1px solid rgba(var(--mode-rgb),.6);
+    box-shadow:
+      0 0 calc(60px + 40px * var(--intensity)) rgba(var(--mode-rgb),calc(.4 + .25 * var(--intensity))) inset,
+      0 0 calc(40px + 30px * var(--intensity)) rgba(var(--mode-rgb),calc(.3 + .25 * var(--intensity)));
+  }
+  /* Pulsing outer ring removed per request — only inner soft glow remains */
+
+  /* PARTICLES =================================================== */
+  .ct-particles{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
+  .flake{
+    position:absolute;color:rgba(var(--mode-rgb),.55);
+    animation: flakeFall var(--dur,9s) linear infinite;
+    animation-delay:var(--delay,0s);
+    opacity:0;will-change:transform,opacity;
+    text-shadow:0 0 8px rgba(var(--mode-rgb),.45);
+  }
+  @keyframes flakeFall{
+    0%{transform:translateY(-8%) translateX(0) rotate(0);opacity:0}
+    10%{opacity:.85}
+    90%{opacity:.65}
+    100%{transform:translateY(108%) translateX(var(--drift,8px)) rotate(360deg);opacity:0}
+  }
+
+  /* RIGHT — tech specs (now scrolled-through) ==================== */
+  .ct-right{
+    position:relative;
+    align-self:center;
+    height:100%;
+    display:flex;flex-direction:column;justify-content:center;align-items:flex-end;
+    padding-top:40px;padding-bottom:80px; /* leave room for selectors below */
+  }
+  .ct-spec-stack{position:relative;width:100%;min-height:280px;display:flex;justify-content:flex-end}
+  .ct-spec{
+    position:absolute;right:0;top:0;
+    max-width:300px;text-align:right;
+    display:flex;flex-direction:column;gap:14px;
+    opacity:0;transform:translateY(16px);
+    transition:opacity .5s var(--ease-state), transform .5s var(--ease-state);
+    pointer-events:none;
+  }
+  .ct-spec[data-active="true"]{opacity:1;transform:translateY(0)}
+  .ct-spec .lab{
+    font:600 10px/1 var(--font-mono);letter-spacing:.22em;text-transform:uppercase;
+    color:var(--mode);transition:color .5s var(--ease-state);
+  }
+  .ct-spec h3{
+    font-size:24px;font-weight:600;letter-spacing:-.015em;line-height:1.25;color:#fff;margin:0;
+    text-wrap:balance;
+  }
+  .ct-spec .figure{
+    font-size:34px;font-weight:700;letter-spacing:-.025em;color:#fff;line-height:1;
+    font-variant-numeric:tabular-nums;
+  }
+  .ct-spec .figure .u{font-size:.5em;font-weight:500;color:rgba(255,255,255,.6);margin-left:4px;letter-spacing:0}
+  .ct-spec p{font-size:14px;line-height:1.55;color:rgba(255,255,255,.65);margin:0}
+
+  /* DIMENSIONAL RULERS over device — appear with spec scenes ===== */
+  .ct-ruler{
+    position:absolute;inset:0;z-index:4;pointer-events:none;
+    opacity:0;transition:opacity .5s var(--ease-state);
+  }
+  .ct-ruler[data-active="true"]{opacity:1}
+  .ct-ruler-line{position:absolute;background:rgba(var(--mode-rgb),.7);box-shadow:0 0 8px rgba(var(--mode-rgb),.4)}
+  .ct-ruler-tick{position:absolute;background:rgba(var(--mode-rgb),.85)}
+  .ct-ruler-label{
+    position:absolute;
+    font:600 10px/1 var(--font-mono);letter-spacing:.08em;
+    color:var(--mode);
+    background:rgba(0,0,0,.7);padding:5px 9px;border-radius:5px;
+    border:1px solid rgba(var(--mode-rgb),.35);
+    backdrop-filter:blur(8px);white-space:nowrap;
+  }
+
+  /* SESSION RING — appears for the "20 min" spec scene =========== */
+  .ct-ring{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:min(80%, 380px);aspect-ratio:1;border-radius:50%;
+    pointer-events:none;
+    opacity:0;transition:opacity .6s var(--ease-state);
+    z-index:4;
+  }
+  .ct-ring[data-active="true"]{opacity:1}
+  .ct-ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+  .ct-ring circle{fill:none;stroke-width:1.5;stroke-linecap:round}
+  .ct-ring .track{stroke:rgba(255,255,255,.07)}
+  .ct-ring .fill{
+    stroke:var(--mode);
+    stroke-dasharray:1000;
+    stroke-dashoffset:1000;
+    transition:stroke-dashoffset 1.6s var(--ease-state), stroke .5s var(--ease-state);
+    filter: drop-shadow(0 0 8px rgba(var(--mode-rgb),.6));
+  }
+  .ct-ring[data-active="true"] .fill{stroke-dashoffset:0}
+
+  /* INTENSITY pills (now BELOW the spec column) — bottom-right === */
+  .ct-int{
+    position:absolute;bottom:24px;right:28px;
+    display:inline-flex;align-items:center;gap:6px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.08);
+    padding:5px;border-radius:999px;
+    backdrop-filter:blur(14px);
+    z-index:7;
+  }
+  .ct-int-btn{
+    appearance:none;background:transparent;border:0;cursor:pointer;
+    padding:9px 16px;border-radius:999px;
+    color:rgba(255,255,255,.55);
+    font:600 11px/1 var(--font-mono);letter-spacing:.16em;text-transform:uppercase;
+    display:inline-flex;align-items:center;gap:8px;
+    transition:all .35s var(--ease-state);
+  }
+  .ct-int-btn .v{font-family:var(--font-sans);font-weight:600;font-size:13px;letter-spacing:-.005em;text-transform:none}
+  .ct-int-btn[data-active="true"]{
+    background:rgba(var(--mode-rgb),.18);
+    color:var(--mode);
+    box-shadow:inset 0 0 0 1px rgba(var(--mode-rgb),.4);
+  }
+
+  /* TRANSITION FLASH ============================================= */
+  .ct-flash{
+    position:absolute;inset:0;z-index:8;pointer-events:none;
+    background:radial-gradient(60% 50% at 50% 50%, rgba(var(--mode-rgb),.6), transparent 70%);
+    opacity:0;mix-blend-mode:screen;
+  }
+  .ct-flash.go{animation:flashSweep .9s var(--ease-enter) forwards}
+  @keyframes flashSweep{
+    0%{opacity:0;transform:scale(.92)}
+    35%{opacity:.9;transform:scale(1)}
+    100%{opacity:0;transform:scale(1.08)}
+  }
+
+  /* SCROLL HINT ================================================== */
+  .ct-scroll-hint{
+    position:absolute;bottom:24px;left:28px;
+    display:inline-flex;align-items:center;gap:10px;
+    font:500 10px/1 var(--font-mono);letter-spacing:.22em;text-transform:uppercase;
+    color:rgba(255,255,255,.45);z-index:6;
+    transition:opacity .4s var(--ease-state);
+  }
+  .ct-scroll-hint .arr{
+    width:14px;height:14px;display:inline-flex;align-items:center;justify-content:center;color:var(--mode);
+    animation:hintBob 1.6s ease-in-out infinite;
+  }
+  @keyframes hintBob{0%,100%{transform:translateY(0);opacity:.6}50%{transform:translateY(3px);opacity:1}}
+
+  /* RESPONSIVE =================================================== */
+  @media (max-width: 1024px){
+    .ct-stage{grid-template-columns:1fr;justify-items:center;text-align:center;padding:60px 24px 110px;gap:20px}
+    .ct-left,.ct-right{align-items:center;text-align:center;width:100%}
+    .ct-product{height:auto;min-height:340px;width:100%}
+    .ct-flipper{width:min(60vw,300px) !important}
+    .ct-flipper[data-face="rear"]{width:min(46vw,220px) !important}
+    .ct-mode-rail{display:none}
+    .ct-tagline{max-width:320px}
+    .ct-card{height:min(94vh, 920px)}
+    .ct-spec{position:relative;text-align:center;align-items:center}
+    .ct-int{left:50%;right:auto;transform:translateX(-50%)}
+    .ct-scroll-hint{display:none}
+  }
+
+  /* Reduced motion */
+  @media (prefers-reduced-motion: reduce){
+    .flake,.ct-plate-glow .ring.pulse,.ct-scroll-hint .arr{animation:none !important}
+    .ct-flash.go{animation:none}
+  }
+</style>
+</head>
+<body>
+<section class="ct-shell" id="ct-page" data-screen-label="01 Product Visualization v2">
+
+  <header class="ct-head">
+    <div>
+      <span class="ct-eyebrow">The Device</span>
+      <h2 class="ct-title">Three modes. <em>One device.</em></h2>
+    </div>
+    <p class="ct-subhead">Cold, heat, contrast — wearable thermoelectric recovery in a 8.6 × 5.6 cm package.</p>
+  </header>
+
+  <div class="ct-track" id="ctTrack">
+    <div class="ct-stage-wrap">
+      <article class="ct-card" id="ctCard">
+
+        <!-- top chrome -->
+        <div class="ct-chrome-top">
+          <span><span id="modeName">Cold Therapy</span> · <span id="levelName">Level 3</span></span>
+          <span class="right"><span id="rightLabel">8°C</span></span>
+        </div>
+
+        <!-- particles -->
+        <div class="ct-particles" id="ctParticles"></div>
+
+        <!-- main stage -->
+        <div class="ct-stage">
+
+          <!-- LEFT -->
+          <div class="ct-left">
+            <div class="ct-mode-word"><span class="word-mask" id="modeWord">Cold.</span></div>
+            <div class="ct-temp" aria-live="polite">
+              <span class="num" id="tempNum">8</span><span class="unit">°C</span>
+            </div>
+            <div class="ct-temp-f" id="tempF">46°F · Maximum cold</div>
+            <p class="ct-tagline">Recovery that fits your life—not the other way around.</p>
+          </div>
+
+          <!-- CENTER: product -->
+          <div class="ct-product" id="ctProduct" data-face="front">
+            <div class="ct-flipper" id="ctFlipper" data-face="front">
+              <div class="ct-face front"><img src="assets/cryotec-front.png" alt="CryoTec front"/></div>
+              <div class="ct-face rear"><img src="assets/cryotec-rear.png" alt="CryoTec rear"/></div>
+            </div>
+            <div class="ct-plate-glow" aria-hidden="true"><div class="ring"></div></div>
+
+            <!-- Dimensional ruler — front device (8.6 × 5.6) -->
+            <div class="ct-ruler" id="rulerFront">
+              <div class="ct-ruler-line" style="right:14%;top:18%;width:1px;height:64%"></div>
+              <div class="ct-ruler-tick" style="right:12%;top:18%;width:8px;height:1px"></div>
+              <div class="ct-ruler-tick" style="right:12%;top:calc(18% + 64%);width:8px;height:1px"></div>
+              <div class="ct-ruler-label" style="right:6%;top:48%;transform:translate(100%,-50%)">8.6 cm</div>
+
+              <div class="ct-ruler-line" style="left:24%;top:13%;width:52%;height:1px"></div>
+              <div class="ct-ruler-tick" style="left:24%;top:11%;width:1px;height:8px"></div>
+              <div class="ct-ruler-tick" style="left:calc(24% + 52%);top:11%;width:1px;height:8px"></div>
+              <div class="ct-ruler-label" style="left:50%;top:5%;transform:translate(-50%,0)">5.6 cm</div>
+            </div>
+
+            <!-- Plate ruler — rear (6.9 × 3.6) -->
+            <div class="ct-ruler" id="rulerRear">
+              <div class="ct-ruler-line"
+                   style="right:calc(100% - var(--plate-x) - var(--plate-w) - 4%);top:var(--plate-y);width:1px;height:var(--plate-h)"></div>
+              <div class="ct-ruler-label"
+                   style="right:calc(100% - var(--plate-x) - var(--plate-w) - 12%);top:calc(var(--plate-y) + var(--plate-h) / 2);transform:translate(100%,-50%)">6.9 cm</div>
+
+              <div class="ct-ruler-line"
+                   style="left:var(--plate-x);top:calc(var(--plate-y) - 6%);width:var(--plate-w);height:1px"></div>
+              <div class="ct-ruler-label"
+                   style="left:calc(var(--plate-x) + var(--plate-w) / 2);top:calc(var(--plate-y) - 14%);transform:translate(-50%,0)">3.6 cm</div>
+            </div>
+
+
+          </div>
+
+          <!-- RIGHT: scrolling spec stack -->
+          <div class="ct-right">
+            <div class="ct-spec-stack">
+
+              <div class="ct-spec" data-spec="1" data-active="true">
+                <span class="lab">Pocket-sized device</span>
+                <h3>Goes wherever you go in a pocket-sized device.</h3>
+                <span class="figure">8.6 <span class="u">×</span> 5.6 <span class="u">×</span> 2.8 <span class="u">cm</span></span>
+                <p>Fits a gym bag, your pocket, or a running vest.</p>
+              </div>
+
+              <div class="ct-spec" data-spec="2">
+                <span class="lab">Therapy plate size</span>
+                <h3>Right-sized for tendons, joints &amp; muscles.</h3>
+                <span class="figure">6.9 <span class="u">×</span> 3.6 <span class="u">cm</span></span>
+                <p>The therapy plate sits flush against your skin, designed for providing therapy to joints and targeted locations— knee, elbow, wrist or shins.</p>
+              </div>
+
+              <div class="ct-spec" data-spec="3">
+                <span class="lab">Clinician-preferred session</span>
+                <h3>Twenty minutes. Hands-free.</h3>
+                <span class="figure">20 <span class="u">min</span></span>
+                <p>The recommended session length— strap it on, set it, and recover immediately.</p>
+              </div>
+
+            </div>
+          </div>
+
+        </div>
+
+        <!-- intensity pills (BELOW spec column, bottom-right) -->
+        <div class="ct-int" role="tablist" aria-label="Intensity">
+          <button class="ct-int-btn" data-level="1"><span>L1</span><span class="v" data-tv-1>16°</span></button>
+          <button class="ct-int-btn" data-level="2"><span>L2</span><span class="v" data-tv-2>12°</span></button>
+          <button class="ct-int-btn" data-level="3" data-active="true"><span>L3</span><span class="v" data-tv-3>8°</span></button>
+        </div>
+
+        <!-- scroll hint -->
+        <div class="ct-scroll-hint" id="scrollHint">
+          <span>Scroll</span>
+          <span class="arr">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+          </span>
+        </div>
+
+        <!-- transition flash -->
+        <div class="ct-flash" id="ctFlash" aria-hidden="true"></div>
+
+      </article>
+    </div>
+  </div>
+
+</section>
+
+<script>
+(function(){
+  const root = document.documentElement;
+  const card = document.getElementById('ctCard');
+  const flash = document.getElementById('ctFlash');
+  const flipper = document.getElementById('ctFlipper');
+  const product = document.getElementById('ctProduct');
+  const particles = document.getElementById('ctParticles');
+  const tempNum = document.getElementById('tempNum');
+  const tempF = document.getElementById('tempF');
+  const modeName = document.getElementById('modeName');
+  const modeWord = document.getElementById('modeWord');
+  const levelName = document.getElementById('levelName');
+  const rightLabel = document.getElementById('rightLabel');
+  const scrollHint = document.getElementById('scrollHint');
+  const track = document.getElementById('ctTrack');
+  const rulerFront = document.getElementById('rulerFront');
+  const rulerRear = document.getElementById('rulerRear');
+
+  // ---- MODE CONFIG ---------------------------------------------
+  const MODES = {
+    cold:{
+      rgb:'96,200,255', rgb2:'120,170,255', word:'Cold.',
+      label:'Cold Therapy',
+      // Level → array of stops to cycle through (3s between adjacent stops)
+      levels:{
+        1:[{c:16,f:61}],
+        2:[{c:12,f:54}],
+        3:[{c:8, f:46}]
+      },
+      kicker:{1:'Gentle cold',2:'Moderate cold',3:'Maximum cold'},
+      particles:'cold',
+      // intensity multiplier per level (drives glow)
+      iMul:{1:.35,2:.65,3:1}
+    },
+    heat:{
+      rgb:'255,100,32', rgb2:'255,160,80', word:'Heat.',
+      label:'Heat Therapy',
+      levels:{
+        1:[{c:36,f:97}],
+        2:[{c:38,f:100}],
+        3:[{c:41,f:106}]
+      },
+      kicker:{1:'Gentle warmth',2:'Therapeutic heat',3:'Maximum heat'},
+      particles:'heat',
+      iMul:{1:.35,2:.65,3:1}
+    },
+    contrast:{
+      // contrast cycles cold↔heat stops within whichever level the user picks
+      levels:{
+        1:[{c:16,f:61,phase:'cold'},{c:36,f:97,phase:'heat'}],
+        2:[{c:12,f:54,phase:'cold'},{c:38,f:100,phase:'heat'}],
+        3:[{c:8, f:46,phase:'cold'},{c:41,f:106,phase:'heat'}]
+      },
+      kicker:{1:'Auto-cycle · 16°↔36°',2:'Auto-cycle · 12°↔38°',3:'Auto-cycle · 8°↔41°'},
+      word:'Contrast.',
+      label:'Contrast Therapy',
+      particles:'contrast',
+      iMul:{1:.5,2:.75,3:1}
+    }
+  };
+  const MODE_KEYS = ['cold','heat','contrast'];
+  const COLD = {rgb:'96,200,255', rgb2:'120,170,255'};
+  const HEAT = {rgb:'255,100,32', rgb2:'255,160,80'};
+
+  // ---- STATE ---------------------------------------------------
+  let mode = 'cold';
+  let level = 3;
+  let levelTimer = null;     // increments level every 4s
+  let stopTimer = null;      // increments stop within level every 3s (contrast)
+  let stopIdx = 0;           // current index in levels[level]
+  let counterRAF = null;     // animation for counting num/glow
+
+  // ---- PARTICLES -----------------------------------------------
+  function rebuildParticles(kind){
+    particles.innerHTML='';
+    const count = kind==='heat'?12: kind==='contrast'?16:18;
+    for(let i=0;i<count;i++){
+      const f = document.createElement('span');
+      f.className='flake';
+      f.style.left = (Math.random()*98+1)+'%';
+      f.style.setProperty('--dur',(7+Math.random()*7)+'s');
+      f.style.setProperty('--delay',(Math.random()*-9)+'s');
+      f.style.setProperty('--drift',((Math.random()-.5)*40)+'px');
+      f.textContent='·';
+      f.style.fontSize = (10+Math.random()*14)+'px';
+      if(kind==='heat'){f.style.color='rgba(255,180,120,.85)'}
+      else if(kind==='contrast'){f.style.color = i%2?'rgba(96,200,255,.7)':'rgba(255,140,80,.75)'}
+      else{f.style.color='rgba(180,225,255,.85)'}
+      particles.appendChild(f);
+    }
+  }
+
+  // ---- COLOR HELPERS -------------------------------------------
+  function rgbStr(v){return v}
+  function lerp(a,b,t){return a+(b-a)*t}
+  function lerpRgb(a,b,t){
+    const av = a.split(',').map(Number);
+    const bv = b.split(',').map(Number);
+    return av.map((x,i)=>Math.round(lerp(x,bv[i],t))).join(',');
+  }
+
+  // ---- CORE: animate to a stop (count numbers, lerp color) -----
+  // Animates from current shown values to a target {c,f,phase?} over ms
+  let anim = null;
+  function animateTo(target, ms){
+    cancelAnimationFrame(counterRAF);
+    const startC = parseFloat(tempNum.textContent) || target.c;
+    const startTime = performance.now();
+    // for color lerp during contrast cycling
+    const isContrast = mode==='contrast';
+    const cfg = MODES[mode];
+
+    // capture start color (current css var)
+    const startRgb = root.style.getPropertyValue('--mode-rgb').trim() || (isContrast?COLD.rgb:cfg.rgb);
+    const startRgb2 = root.style.getPropertyValue('--mode-2-rgb').trim() || (isContrast?COLD.rgb2:cfg.rgb2);
+    const targetPalette = isContrast
+      ? (target.phase==='heat' ? HEAT : COLD)
+      : {rgb:cfg.rgb, rgb2:cfg.rgb2};
+
+    function frame(now){
+      const t = Math.min(1, (now-startTime)/ms);
+      const eased = t<.5 ? 2*t*t : 1 - Math.pow(-2*t+2,2)/2; // easeInOut
+      const cur = lerp(startC, target.c, eased);
+      tempNum.textContent = Math.round(cur);
+      // color lerp (contrast only really moves; non-contrast stays)
+      if(isContrast){
+        const r = lerpRgb(startRgb, targetPalette.rgb, eased);
+        const r2 = lerpRgb(startRgb2, targetPalette.rgb2, eased);
+        root.style.setProperty('--mode-rgb', r);
+        root.style.setProperty('--mode', `rgb(${r})`);
+        root.style.setProperty('--mode-2-rgb', r2);
+        root.style.setProperty('--mode-2', `rgb(${r2})`);
+      }
+      if(t<1){counterRAF = requestAnimationFrame(frame)}
+      else{
+        tempNum.textContent = target.c;
+        rightLabel.textContent = `${target.c}°C`;
+        tempF.textContent = `${target.f}°F · ${cfg.kicker[level]}`;
+      }
+    }
+    counterRAF = requestAnimationFrame(frame);
+  }
+
+  // ---- APPLY MODE ----------------------------------------------
+  function applyMode(m,opts={}){
+    if(m===mode && !opts.force) return;
+    const prev = mode;
+    mode = m;
+    const cfg = MODES[m];
+
+    if(opts.flash){
+      flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go');
+    }
+
+    // base palette (contrast starts from cold)
+    if(m==='contrast'){
+      root.style.setProperty('--mode-rgb', COLD.rgb);
+      root.style.setProperty('--mode', `rgb(${COLD.rgb})`);
+      root.style.setProperty('--mode-2-rgb', COLD.rgb2);
+      root.style.setProperty('--mode-2', `rgb(${COLD.rgb2})`);
+    } else {
+      root.style.setProperty('--mode-rgb', cfg.rgb);
+      root.style.setProperty('--mode', `rgb(${cfg.rgb})`);
+      root.style.setProperty('--mode-2-rgb', cfg.rgb2);
+      root.style.setProperty('--mode-2', `rgb(${cfg.rgb2})`);
+    }
+
+    modeName.textContent = cfg.label;
+    modeWord.textContent = cfg.word;
+
+    // intensity pill labels
+    Object.entries(cfg.levels).forEach(([l,arr])=>{
+      const el = document.querySelector(`[data-tv-${l}]`);
+      if(!el) return;
+      if(m==='contrast') el.textContent = `${arr[0].c}°↔${arr[1].c}°`;
+      else el.textContent = `${arr[0].c}°`;
+    });
+
+    // rail
+    document.querySelectorAll('.ct-mode-rail .rail-item').forEach(b=>{
+      b.dataset.active = (b.dataset.mode===m).toString();
+    });
+
+    // face: front for cold, rear for heat & contrast (rear shows plate-glow)
+    const newFace = (m==='cold') ? 'front' : 'rear';
+    flipper.dataset.face = newFace;
+    product.dataset.face = newFace;
+
+    rebuildParticles(cfg.particles);
+    startCycle(); // reset cycling timers
+  }
+
+  // ---- CYCLING -------------------------------------------------
+  // Cold/Heat: auto-advance level every 4s
+  // Contrast: STAY on user-selected level (default L3); cycle cold↔heat stops every 3s with 3s tween
+  function startCycle(){
+    if(levelTimer) clearInterval(levelTimer);
+    if(stopTimer) clearInterval(stopTimer);
+    stopIdx = 0;
+    applyLevelStop(level, 0, 0); // immediate
+
+    if(mode==='contrast'){
+      // count over 3s, then hold 2s, then reverse — total 5s per direction
+      stopTimer = setInterval(()=>{
+        const stops = MODES[mode].levels[level];
+        stopIdx = (stopIdx+1) % stops.length;
+        applyLevelStop(level, stopIdx, 3000);
+      }, 5000);
+      // contrast does NOT auto-advance level — user picks
+      return;
+    }
+    // cold/heat: every 4s advance to next level
+    levelTimer = setInterval(()=>{
+      level = level >= 3 ? 1 : level+1;
+      stopIdx = 0;
+      applyLevelStop(level, 0, 900);
+    }, 4000);
+  }
+
+  function applyLevelStop(l, sIdx, ms){
+    level = l; stopIdx = sIdx;
+    const cfg = MODES[mode];
+    const stops = cfg.levels[l];
+    const target = stops[sIdx];
+    levelName.textContent = `Level ${l}`;
+    document.querySelectorAll('.ct-int-btn').forEach(b=>{
+      b.dataset.active = (parseInt(b.dataset.level)===l).toString();
+    });
+    // intensity multiplier — feeds CSS for glow strength
+    root.style.setProperty('--intensity', cfg.iMul[l].toString());
+
+    // animate counter + (in contrast) color
+    if(ms<=0){
+      tempNum.textContent = target.c;
+      rightLabel.textContent = `${target.c}°C`;
+      tempF.textContent = `${target.f}°F · ${cfg.kicker[l]}`;
+      if(mode==='contrast'){
+        const pal = target.phase==='heat' ? HEAT : COLD;
+        root.style.setProperty('--mode-rgb', pal.rgb);
+        root.style.setProperty('--mode', `rgb(${pal.rgb})`);
+        root.style.setProperty('--mode-2-rgb', pal.rgb2);
+        root.style.setProperty('--mode-2', `rgb(${pal.rgb2})`);
+      }
+    } else {
+      animateTo(target, ms);
+    }
+  }
+
+  // ---- WIRE manual controls ------------------------------------
+  document.querySelectorAll('.ct-int-btn').forEach(btn=>{
+    btn.addEventListener('click',()=>{
+      level = parseInt(btn.dataset.level);
+      if(levelTimer) clearInterval(levelTimer);
+      if(stopTimer) clearInterval(stopTimer);
+      applyLevelStop(level, 0, 700);
+      startCycle();
+    });
+  });
+
+  // ---- SCROLL DRIVES MODE + SPEC -------------------------------
+  function progress(){
+    const r = track.getBoundingClientRect();
+    const total = track.offsetHeight - window.innerHeight;
+    if(total<=0) return 0;
+    return Math.max(0, Math.min(1, -r.top/total));
+  }
+  function scrollToMode(i){
+    const total = track.offsetHeight - window.innerHeight;
+    const targets = [0.05, 0.40, 0.78];
+    const top = track.offsetTop + targets[i]*total;
+    window.scrollTo({top, behavior:'smooth'});
+  }
+
+  // Each scroll segment = one mode + one spec. Three segments total.
+  // 1: Cold  + front device dimensions ruler (8.6 × 5.6 × 2.8)
+  // 2: Heat  + rear therapy plate ruler   (6.9 × 3.6)
+  // 3: Contrast + 20-min session ring     (no rulers)
+  let lastSegment = -1;
+  function onScroll(){
+    const p = progress();
+    const seg = p<0.34 ? 0 : p<0.66 ? 1 : 2;
+    if(seg!==lastSegment){
+      lastSegment = seg;
+      applyMode(MODE_KEYS[seg],{flash:true});
+      applySpec(seg);
+    }
+    if(p>0.04) scrollHint.style.opacity='0';
+    else scrollHint.style.opacity='';
+  }
+
+  function applySpec(idx){
+    document.querySelectorAll('.ct-spec').forEach((el,i)=>{
+      el.dataset.active = (i===idx).toString();
+    });
+    // 0 = front device dimensions ruler (cold)
+    // 1 = rear plate ruler (heat)
+    // 2 = session ring (contrast) — no ruler
+    rulerFront.dataset.active = (idx===0).toString();
+    rulerRear.dataset.active = (idx===1).toString();
+  }
+
+  // ---- INIT ----------------------------------------------------
+  applyMode('cold',{force:true});
+  applySpec(0);
+  // remove unused references
+  void rightLabel; void modeName; void levelName;
+  window.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+})();
+</script>
+</body>
+</html>
