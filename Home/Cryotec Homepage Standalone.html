@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>CryoTec — Wearable Cold, Heat & Contrast Recovery</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Unna:ital,wght@0,400;0,700;1,400;1,700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+<template id="__bundler_thumbnail" data-bg-color="#f7f7f5">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#f7f7f5"/>
+    <!-- soft cool glow behind the mark -->
+    <defs>
+      <radialGradient id="g1" cx="50%" cy="42%" r="40%">
+        <stop offset="0%" stop-color="#60c8ff" stop-opacity="0.45"/>
+        <stop offset="100%" stop-color="#60c8ff" stop-opacity="0"/>
+      </radialGradient>
+    </defs>
+    <ellipse cx="600" cy="340" rx="280" ry="180" fill="url(#g1)"/>
+    <!-- snowflake / thermal mark -->
+    <g transform="translate(600,340)" stroke="#0066FF" stroke-width="6" stroke-linecap="round" fill="none">
+      <line x1="0" y1="-58" x2="0" y2="58"/>
+      <line x1="-50" y1="-29" x2="50" y2="29"/>
+      <line x1="-50" y1="29" x2="50" y2="-29"/>
+      <circle cx="0" cy="0" r="14" fill="#0066FF" stroke="none"/>
+    </g>
+    <!-- wordmark -->
+    <text x="600" y="500" font-family="Unna, Georgia, serif" font-size="86" font-weight="700" font-style="italic" text-anchor="middle" fill="#111">CryoTec</text>
+    <text x="600" y="558" font-family="ui-monospace, Menlo, monospace" font-size="20" font-weight="600" letter-spacing="6" text-anchor="middle" fill="#0066FF">RECOVERY · REDESIGNED</text>
+  </svg>
+</template>
+<style>
+  html, body { margin: 0; padding: 0; background: #f7f7f5; font-family: 'Inter', sans-serif; color: #111; }
+  * { box-sizing: border-box; }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="comparison.jsx"></script>
+<script type="text/babel" src="modes-section-v30.jsx"></script>
+<script type="text/babel" src="homepage-sections.jsx"></script>
+
+<script type="text/babel">
+/* Renders G · Full Homepage Stack at native 1440px width inside a normal
+   scrolling document — the only place where the v30 sticky-scroll modes
+   section can actually engage. Inside the design canvas the artboard is
+   clipped (overflow:hidden) so sticky degrades to relative; here the page
+   scroll drives the cold → heat → contrast transitions exactly the way
+   the original v30 prototype does. */
+function HomepageStackLive() {
+  return (
+    <div style={{background:'#f7f7f5'}}>
+      <HeroSection />
+      <VariationPremium surface="card" />
+      <ConditionsSection />
+      <ModesSection />
+      <FounderSection />
+      <LaunchFAQSection />
+      <ReviewsSection />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<HomepageStackLive />);
+</script>
+</body>
+</html>
